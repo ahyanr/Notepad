@@ -1,0 +1,151 @@
+﻿Build1=Default,b4a.notepad.ahy
+Group=Default Group
+Library1=clipboard
+Library2=core
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~
+Module1=Starter
+NumberOfFiles=0
+NumberOfLibraries=2
+NumberOfModules=1
+Version=13.1
+@EndOfDesignText@
+#Region  Project Attributes 
+    #ApplicationLabel: Notepad by AHY
+    #VersionCode: 1
+    #VersionName: 1.0
+    #SupportedOrientations: unspecified
+    #CanInstallToExternalStorage: False
+#End Region
+
+#Region  Activity Attributes 
+    #FullScreen: False
+    #IncludeTitle: True
+#End Region
+
+Sub Process_Globals
+	Private tmrKursor As Timer
+End Sub
+
+Sub Globals
+	Private txtNote As EditText
+	Private btnSalin As Button
+	Private btnReplace As Button
+	Private txtReplaceFrom As EditText
+	Private txtReplaceTo As EditText
+	Private Clipboard As BClipboard
+	Private txtLineNumber As EditText
+	Private posisiKursorSebelumnya As Int = -1
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.Color = Colors.Black
+	InitNotepad
+	tmrKursor.Initialize("tmrKursor", 300)
+	tmrKursor.Enabled = True
+End Sub
+
+Sub InitNotepad
+	Dim kolomLebar As Int = (100%x - 30dip) / 2
+	
+	'=== TextBox Nomor Baris ===
+	txtLineNumber.Initialize("")
+	txtLineNumber.SingleLine = False
+	txtLineNumber.TextColor = Colors.Gray
+	txtLineNumber.Color = 0xFF1E1E1E
+	txtLineNumber.TextSize = 16
+	txtLineNumber.Gravity = Bit.Or(Gravity.TOP, Gravity.CENTER)
+	txtLineNumber.Enabled = False
+	txtLineNumber.InputType = Bit.Or(1, 131072)
+	Activity.AddView(txtLineNumber, 0, 10dip, 30dip, 100%y - 270dip)
+
+	'=== Text Area ===
+	txtNote.Initialize("txtNote")
+	txtNote.SingleLine = False
+	txtNote.TextColor = Colors.White
+	txtNote.Color = 0xFF2C2C2C
+	txtNote.TextSize = 16
+	txtNote.InputType = Bit.Or(1, Bit.Or(131072, 16384))
+	txtNote.Gravity = Bit.Or(Gravity.TOP, Gravity.LEFT)
+	Activity.AddView(txtNote, 30dip, 10dip, 100%x - 40dip, 100%y - 270dip)
+
+	'=== Replace From ===
+	txtReplaceFrom.Initialize("")
+	txtReplaceFrom.Hint = "Find"
+	txtReplaceFrom.Color = 0xFF3A3A3A
+	txtReplaceFrom.TextColor = Colors.White
+	txtReplaceFrom.InputType = Bit.Or(1, 16384)
+	Activity.AddView(txtReplaceFrom, 10dip, txtNote.Top + txtNote.Height + 10dip, kolomLebar, 40dip)
+
+	'=== Replace To ===
+	txtReplaceTo.Initialize("")
+	txtReplaceTo.Hint = "Replace"
+	txtReplaceTo.Color = 0xFF3A3A3A
+	txtReplaceTo.TextColor = Colors.White
+	txtReplaceTo.InputType = Bit.Or(1, 16384)
+	Activity.AddView(txtReplaceTo, txtReplaceFrom.Left + kolomLebar + 10dip, txtReplaceFrom.Top, kolomLebar, 40dip)
+
+	'=== Tombol Replace ===
+	btnReplace.Initialize("btnReplace")
+	btnReplace.Text = "Ganti Kata"
+	btnReplace.Color = 0xFF555555
+	btnReplace.TextColor = Colors.White
+	Activity.AddView(btnReplace, 10dip, txtReplaceFrom.Top + txtReplaceFrom.Height + 10dip, 100%x - 20dip, 40dip)
+
+	'=== Tombol Salin Semua ===
+	btnSalin.Initialize("btnSalin")
+	btnSalin.Text = "Salin Semua"
+	btnSalin.Color = 0xFF777777
+	btnSalin.TextColor = Colors.White
+	Activity.AddView(btnSalin, 10dip, btnReplace.Top + btnReplace.Height + 10dip, 100%x - 20dip, 40dip)
+End Sub
+
+Sub UpdateLineNumbers
+	Dim lines() As String = Regex.Split("\n", txtNote.Text)
+	Dim hasil As String = ""
+	For i = 0 To lines.Length - 1
+		hasil = hasil & (i + 1) & CRLF
+	Next
+	txtLineNumber.Text = hasil
+End Sub
+
+Sub HighlightActiveLine(posisiKursor As Int)
+	Dim teksSebelum As String = txtNote.Text.SubString2(0, posisiKursor)
+	Dim barisAktif As Int = Regex.Split("\n", teksSebelum).Length
+
+	Dim lines() As String = Regex.Split("\n", txtNote.Text)
+	Dim hasil As String = ""
+	For i = 0 To lines.Length - 1
+		If i + 1 = barisAktif Then
+			hasil = hasil & (i + 1) & CRLF ' Baris aktif tetap ditampilkan biasa
+		Else
+			hasil = hasil & (i + 1) & CRLF
+		End If
+	Next
+	txtLineNumber.Text = hasil
+	txtLineNumber.TextColor = Colors.Gray ' Default semua abu
+	txtLineNumber.SelectionStart = 0 ' Reset posisi kursor
+End Sub
+
+Sub tmrKursor_Tick
+	Dim posisiSekarang As Int = txtNote.SelectionStart
+	If posisiSekarang <> posisiKursorSebelumnya Then
+		posisiKursorSebelumnya = posisiSekarang
+		HighlightActiveLine(posisiSekarang)
+	End If
+End Sub
+
+Sub txtNote_TextChanged (Old As String, New As String)
+	UpdateLineNumbers
+End Sub
+
+Sub btnSalin_Click
+	Clipboard.SetText(txtNote.Text)
+	ToastMessageShow("Semua teks telah disalin!", False)
+End Sub
+
+Sub btnReplace_Click
+	Dim kataLama As String = txtReplaceFrom.Text
+	Dim kataBaru As String = txtReplaceTo.Text
+	txtNote.Text = txtNote.Text.Replace(kataLama, kataBaru)
+	ToastMessageShow("Kata diganti!", False)
+End Sub
